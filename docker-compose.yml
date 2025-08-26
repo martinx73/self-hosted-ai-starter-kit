@@ -2,6 +2,7 @@ volumes:
   n8n_storage:
   postgres_storage:
   ollama_storage:
+  openwebui_storage:
   qdrant_storage:
 
 networks:
@@ -46,6 +47,18 @@ x-init-ollama: &init-ollama
   command:
     - "-c"
     - "sleep 3; ollama pull llama3.2"
+
+x-openwebui: &service-openwebui
+  image: ghcr.io/open-webui/open-webui:main
+  container_name: openwebui
+  networks: ['demo']
+  volumes:
+    - openwebui_storage:/app/backend/data
+  ports:
+    - 8080:8080
+  environment:
+    - 'OLLAMA_BASE_URL=http://ollama:11434'
+  restart: unless-stopped
 
 services:
   postgres:
@@ -148,3 +161,21 @@ services:
     image: ollama/ollama:rocm
     depends_on:
      - ollama-gpu-amd
+
+  openwebui-cpu:
+    profiles: ["cpu"]
+    <<: *service-openwebui
+    depends_on:
+      - ollama-cpu
+
+  openwebui-gpu:
+    profiles: ["gpu-nvidia"]
+    <<: *service-openwebui
+    depends_on:
+      - ollama-gpu
+
+  openwebui-gpu-amd:
+    profiles: ["gpu-amd"]
+    <<: *service-openwebui
+    depends_on:
+      - ollama-gpu-amd
